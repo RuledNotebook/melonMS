@@ -1,0 +1,5 @@
+# The sidecar reuses the troponin-experiments venv; this file is reference only.
+# Versions match what is installed at troponin-experiments/.venv (Python 3.14).
+alphatims==1.0.9
+numpy>=2.0
+scipy>=1.13

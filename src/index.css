@@ -1,0 +1,352 @@
+/*  Troponin TDMS app — base layout and dark theme.
+    Kept lean: no CSS framework. Hand-tuned dark palette so spectra read clearly. */
+
+:root {
+  --bg-0: #0d1117;
+  --bg-1: #161b22;
+  --bg-2: #1f242c;
+  --bg-3: #2a313a;
+  --line: #2d343d;
+  --text-0: #e6edf3;
+  --text-1: #b1bac4;
+  --text-2: #7d8590;
+  --accent: #6cf;
+  --accent-strong: #58a6ff;
+  --warn: #f0b04a;
+  --error: #f85149;
+  --success: #3fb950;
+  --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", "Cascadia Mono",
+    Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-0);
+  color: var(--text-0);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--bg-3);
+  border-color: var(--accent-strong);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+input[type="number"],
+select {
+  background: var(--bg-1);
+  color: var(--text-0);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font: inherit;
+  width: 90px;
+}
+
+input[type="number"]:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent-strong);
+}
+
+/* ---- top-level layout ---- */
+
+.app {
+  display: grid;
+  grid-template-rows: 36px 1fr 24px;
+  height: 100vh;
+}
+
+.app__titlebar {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  user-select: none;
+}
+
+.app__titlebar small {
+  margin-left: 10px;
+  color: var(--text-2);
+  font-weight: 400;
+}
+
+.app__main {
+  display: grid;
+  grid-template-columns: 280px 1fr 320px;
+  min-height: 0;
+}
+
+.app__statusbar {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--bg-1);
+  border-top: 1px solid var(--line);
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  gap: 14px;
+}
+
+.app__statusbar .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  display: inline-block;
+}
+.app__statusbar .dot.idle {
+  background: var(--text-2);
+}
+.app__statusbar .dot.busy {
+  background: var(--warn);
+  animation: pulse 1s infinite ease-in-out;
+}
+.app__statusbar .dot.ok {
+  background: var(--success);
+}
+.app__statusbar .dot.err {
+  background: var(--error);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+/* ---- panes ---- */
+
+.pane {
+  background: var(--bg-1);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.pane:last-of-type {
+  border-right: none;
+  border-left: 1px solid var(--line);
+}
+
+.pane__header {
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-1);
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.pane__body {
+  padding: 12px 14px;
+}
+
+.section {
+  margin-bottom: 18px;
+}
+
+.section h4 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+
+.row label {
+  flex: 1;
+  color: var(--text-1);
+}
+
+.row.range {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+}
+
+.row.range input {
+  width: 70px;
+}
+
+.note {
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1.45;
+  margin-top: 6px;
+}
+
+/* ---- center: spectrum view ---- */
+
+.spectrum {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-0);
+  min-width: 0;
+}
+
+.spectrum__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+
+.spectrum__title {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spectrum__plot {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.spectrum__empty,
+.spectrum__loading,
+.spectrum__error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+  color: var(--text-2);
+}
+
+.spectrum__error {
+  color: var(--error);
+}
+
+.spectrum__loading .spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--bg-3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- DropZone ---- */
+
+.dropzone {
+  flex: 1;
+  margin: 18px;
+  border: 2px dashed var(--line);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px;
+  cursor: pointer;
+  transition: border-color 120ms, background 120ms, transform 80ms;
+  text-align: center;
+  user-select: none;
+}
+
+.dropzone:hover {
+  border-color: var(--accent-strong);
+  background: rgba(88, 166, 255, 0.04);
+}
+
+.dropzone.is-active {
+  border-color: var(--accent);
+  background: rgba(88, 166, 255, 0.08);
+  transform: scale(1.005);
+}
+
+.dropzone__title {
+  font-size: 14px;
+  color: var(--text-0);
+  font-weight: 500;
+}
+
+.dropzone__hint {
+  color: var(--text-2);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.dropzone__icon {
+  font-size: 28px;
+  opacity: 0.5;
+}
+
+/* ---- uPlot tweaks ---- */
+
+.uplot {
+  font-family: var(--mono) !important;
+}
+
+.uplot .u-legend {
+  color: var(--text-1);
+}
+
+.uplot .u-axis {
+  color: var(--text-1);
+}
