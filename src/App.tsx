@@ -1,16 +1,26 @@
-import { onMount, Show } from "solid-js";
+import { createEffect, createMemo, on, onMount, Show } from "solid-js";
 import { DropZone } from "./components/DropZone";
 import { FilterPane } from "./components/FilterPane";
+import { MassView } from "./components/MassView";
 import { ParameterPane } from "./components/ParameterPane";
 import { SpectrumView } from "./components/SpectrumView";
+import { Toasts } from "./components/Toasts";
+import { Toolbar } from "./components/Toolbar";
 import { getSidecarStatus, isTauri } from "./api/sidecar";
 import {
+  cancelInFlightForNewSpectrum,
+  scheduleDeconvRerun,
+} from "./state/analysis";
+import {
+  clearAnalysisState,
+  deconvParams,
+  deconvResult,
+  error,
+  loading,
   setSidecarStatus,
   setSpectrum,
   sidecarStatus,
   spectrum,
-  loading,
-  error,
 } from "./state/store";
 
 /* Visit ?demo=1 in the browser to load a synthetic spectrum without the
@@ -54,6 +64,17 @@ function maybeLoadDemoSpectrum() {
 export function App() {
   onMount(async () => {
     maybeLoadDemoSpectrum();
+    // ?autorun=1 triggers a run-deconvolution after demo load (handy for
+    // headless screenshots and end-to-end smoke checks).
+    if (typeof window !== "undefined" && window.location.search.includes("autorun=1")) {
+      // Defer one tick so the spectrumIdentity effect's clearAnalysisState
+      // has run before we kick off the deconv.
+      queueMicrotask(() => {
+        import("./state/analysis").then(({ runDeconvolution }) => {
+          runDeconvolution();
+        });
+      });
+    }
     if (!isTauri()) {
       setSidecarStatus({
         kind: "error",
@@ -71,6 +92,38 @@ export function App() {
         message: e instanceof Error ? e.message : String(e),
       });
     }
+  });
+
+  /* New spectrum -> clear any analysis state and cancel pending work. */
+  const spectrumIdentity = createMemo(() => spectrum()?.path ?? null);
+  createEffect(
+    on(spectrumIdentity, (path, prev) => {
+      if (path !== prev) {
+        cancelInFlightForNewSpectrum();
+        clearAnalysisState();
+      }
+    })
+  );
+
+  /* Debounced auto-rerun of deconvolution on parameter changes (800ms). */
+  createEffect(() => {
+    // Subscribe to all top-level deconvParams keys.
+    deconvParams.mz_min;
+    deconvParams.mz_max;
+    deconvParams.charge_low;
+    deconvParams.charge_high;
+    deconvParams.mass_low;
+    deconvParams.mass_high;
+    deconvParams.mass_bin;
+    deconvParams.peak_fwhm;
+    deconvParams.peak_shape;
+    deconvParams.iterations;
+    deconvParams.convergence;
+    deconvParams.beta_charge;
+    deconvParams.beta_mass;
+    deconvParams.background_subtraction;
+    deconvParams.noise_threshold;
+    scheduleDeconvRerun();
   });
 
   function statusDot() {
@@ -96,21 +149,26 @@ export function App() {
   return (
     <div class="app">
       <header class="app__titlebar">
-        Troponin TDMS
-        <small>native top-down · v0 scaffold</small>
+        melonMS
+        <small>native top-down · v1</small>
       </header>
+
+      <Toolbar />
 
       <main class="app__main">
         <ParameterPane />
 
-        <section
-          style={{ display: "grid", "grid-template-rows": "1fr auto", "min-width": 0 }}
-        >
+        <section class="app__center">
           <Show
             when={spectrum() || loading() || error()}
             fallback={<DropZone />}
           >
-            <SpectrumView />
+            <Show when={deconvResult()} fallback={<SpectrumView />}>
+              <div class="app__centersplit">
+                <SpectrumView />
+                <MassView />
+              </div>
+            </Show>
           </Show>
         </section>
 
@@ -134,6 +192,8 @@ export function App() {
           {isTauri() ? "tauri" : "browser-dev"}
         </span>
       </footer>
+
+      <Toasts />
     </div>
   );
 }

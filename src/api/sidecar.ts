@@ -9,7 +9,12 @@
    the SPA for UI work without confusingly silent failures. */
 
 import type {
+  DeconvParams,
+  DeconvResult,
+  FilterParams,
+  FilterResult,
   LoadSpectrumParams,
+  MassPeak,
   SidecarStatus,
   SpectrumResult,
 } from "../state/types";
@@ -61,4 +66,38 @@ export async function sidecarCall<T = unknown>(
   params: Record<string, unknown> = {}
 ): Promise<T> {
   return call<T>("sidecar_call", { command, params });
+}
+
+/* ---- v1: deconvolution ----
+   Sends mz + intensity arrays alongside Tier-1 params. The sidecar returns the
+   DeconvResult shape declared in state/types.ts. */
+export interface DeconvolveCallParams {
+  mz: number[];
+  intensity: number[];
+  params: DeconvParams;
+}
+
+export async function deconvolve(
+  args: DeconvolveCallParams
+): Promise<DeconvResult> {
+  return sidecarCall<DeconvResult>("deconvolve", {
+    mz: args.mz,
+    intensity: args.intensity,
+    params: args.params,
+  });
+}
+
+/* ---- v1: post-hoc filters ---- */
+export interface ApplyFiltersCallParams {
+  mass_list: MassPeak[];
+  params: FilterParams;
+}
+
+export async function applyFilters(
+  args: ApplyFiltersCallParams
+): Promise<FilterResult> {
+  return sidecarCall<FilterResult>("apply_filters", {
+    mass_list: args.mass_list,
+    params: args.params,
+  });
 }
