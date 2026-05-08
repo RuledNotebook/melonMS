@@ -17,6 +17,22 @@ export interface LoadSpectrumParams {
   downsample_target?: number;
 }
 
+/* One row in the multi-sample picker. Mirrors the JSON shape returned by the
+   list_d_folders sidecar command. `valid` is false when analysis.tdf or
+   analysis.tdf_bin is missing — those rows render greyed out and are not
+   clickable. */
+export interface Sample {
+  name: string;
+  path: string;
+  size_mb: number;
+  valid: boolean;
+}
+
+export interface ListDFoldersResult {
+  parent: string;
+  samples: Sample[];
+}
+
 export interface SpectrumResult {
   name: string;
   path: string;

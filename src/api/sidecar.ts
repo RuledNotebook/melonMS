@@ -13,6 +13,7 @@ import type {
   DeconvResult,
   FilterParams,
   FilterResult,
+  ListDFoldersResult,
   LoadSpectrumParams,
   MassPeak,
   SidecarStatus,
@@ -57,6 +58,16 @@ export async function loadSpectrum(
   return call<SpectrumResult>("sidecar_call", {
     command: "load_spectrum",
     params,
+  });
+}
+
+/* Walks a parent folder and returns the list of `.d` subdirectories so the
+   DropZone can show an inline sample picker for multi-acquisition workflows.
+   See python/commands/list_d_folders.py for the contract. */
+export async function listDFolders(path: string): Promise<ListDFoldersResult> {
+  return call<ListDFoldersResult>("sidecar_call", {
+    command: "list_d_folders",
+    params: { path },
   });
 }
 

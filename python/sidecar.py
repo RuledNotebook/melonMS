@@ -44,11 +44,13 @@ if EXPERIMENTS_DIR.exists():
 from commands import load_spectrum  # noqa: E402
 from commands import deconvolve  # noqa: E402
 from commands import apply_filters  # noqa: E402
+from commands import list_d_folders  # noqa: E402
 
 COMMAND_REGISTRY = {
     "load_spectrum": load_spectrum.run,
     "deconvolve": deconvolve.run,
     "apply_filters": apply_filters.run,
+    "list_d_folders": list_d_folders.run,
     "ping": lambda params: {"pong": True, "echo": params},
 }
 
