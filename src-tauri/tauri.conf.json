@@ -17,7 +17,7 @@
         "height": 900,
         "minWidth": 1100,
         "minHeight": 700,
-        "fileDropEnabled": true,
+        "dragDropEnabled": true,
         "decorations": true,
         "resizable": true
       }
