@@ -83,17 +83,22 @@ export interface DeconvParams {
   noise_threshold: number;
 }
 
+/* Native-MS-realistic Tier-1 defaults. Mass range is clamped to 8–80 kDa
+   so the engine's mass × charge grid stays in the few-million-cell
+   range; wide-open 5–200 kDa with 1 Da bins is what was making single
+   runs take 5+ minutes. The "Wide mass window" preset opens the range
+   back up explicitly when the user actually needs it. */
 export const DEFAULT_DECONV_PARAMS: DeconvParams = {
   mz_min: 600,
   mz_max: 6000,
   charge_low: 5,
   charge_high: 50,
-  mass_low: 5000,
-  mass_high: 200000,
+  mass_low: 8_000,
+  mass_high: 80_000,
   mass_bin: 1.0,
   peak_fwhm: 0.5,
   peak_shape: "gaussian",
-  iterations: 100,
+  iterations: 60,
   convergence: 1e-4,
   beta_charge: 0.0,
   beta_mass: 0.0,

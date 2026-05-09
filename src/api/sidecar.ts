@@ -109,25 +109,47 @@ export async function subscribeProgress(
 }
 
 /* ---- v1: deconvolution ----
-   Sends mz + intensity arrays alongside Tier-1 params. The sidecar returns the
-   DeconvResult shape declared in state/types.ts. */
+   The Python contract uses `mz_array`, `intensity_array`, `deconv_params`
+   (see python/commands/deconvolve.py header). We translate FE shapes to
+   that contract here so the rest of the FE can use ergonomic names. The
+   FE's `background_subtraction: boolean` is collapsed onto the Python
+   `background: "none" | "linear" | "polynomial"` triple-state. */
 export interface DeconvolveCallParams {
   mz: number[];
   intensity: number[];
   params: DeconvParams;
 }
 
+function toEngineDeconvParams(p: DeconvParams): Record<string, unknown> {
+  return {
+    mass_low: p.mass_low,
+    mass_high: p.mass_high,
+    charge_low: p.charge_low,
+    charge_high: p.charge_high,
+    mass_bin: p.mass_bin,
+    peak_fwhm: p.peak_fwhm,
+    peak_shape: p.peak_shape,
+    iterations: p.iterations,
+    convergence: p.convergence,
+    beta_charge: p.beta_charge,
+    beta_mass: p.beta_mass,
+    background: p.background_subtraction ? "linear" : "none",
+    noise_threshold: p.noise_threshold,
+  };
+}
+
 export async function deconvolve(
   args: DeconvolveCallParams
 ): Promise<DeconvResult> {
   return sidecarCall<DeconvResult>("deconvolve", {
-    mz: args.mz,
-    intensity: args.intensity,
-    params: args.params,
+    mz_array: args.mz,
+    intensity_array: args.intensity,
+    deconv_params: toEngineDeconvParams(args.params),
   });
 }
 
-/* ---- v1: post-hoc filters ---- */
+/* ---- v1: post-hoc filters ----
+   Python expects `filters`, not `params`. */
 export interface ApplyFiltersCallParams {
   mass_list: MassPeak[];
   params: FilterParams;
@@ -138,6 +160,6 @@ export async function applyFilters(
 ): Promise<FilterResult> {
   return sidecarCall<FilterResult>("apply_filters", {
     mass_list: args.mass_list,
-    params: args.params,
+    filters: args.params,
   });
 }

@@ -19,17 +19,22 @@ export const [spectrum, setSpectrum] = createSignal<SpectrumResult | null>(null)
 export const [loading, setLoading] = createSignal(false);
 export const [error, setError] = createSignal<string | null>(null);
 
-/* Streaming progress for long-running commands (load_spectrum mainly).
-   Updated by the sidecar-progress Tauri event subscription in
-   ProjectSidebar; consumed by LoadingBar. */
-export interface LoadProgress {
+/* Streaming progress for long-running commands. `loadProgress` is set
+   while load_spectrum is running, `deconvProgress` while deconvolution
+   runs. Both are populated via the sidecar-progress Tauri event
+   subscription in their respective callers. */
+export interface CommandProgress {
   stage: string;
   step?: number;
   steps?: number;
   frame?: number;
   frames?: number;
 }
-export const [loadProgress, setLoadProgress] = createSignal<LoadProgress | null>(null);
+export const [loadProgress, setLoadProgress] = createSignal<CommandProgress | null>(null);
+export const [deconvProgress, setDeconvProgress] = createSignal<CommandProgress | null>(null);
+
+// Backwards-compat type alias — older imports use LoadProgress.
+export type LoadProgress = CommandProgress;
 
 export const [sidecarStatus, setSidecarStatus] = createSignal<SidecarStatus>({
   kind: "absent",
@@ -66,8 +71,12 @@ export const [filterRunning, setFilterRunning] = createSignal(false);
 /* Selected peak (from MassView click) — keyed by mass value. */
 export const [selectedMass, setSelectedMass] = createSignal<number | null>(null);
 
-/* Toggle in MassView: show only filter-passing peaks vs. all. */
-export const [showOnlyPassing, setShowOnlyPassing] = createSignal(false);
+/* Toggle in MassView: show only filter-passing peaks vs. all. Default
+   on — non-passing peaks at native-MS noise levels (4000+ at 0.5%
+   threshold) cluster into dense bands that read as "random green
+   sections" of the chart. The toggle is exposed in the MassView
+   header so the user can flip it for context. */
+export const [showOnlyPassing, setShowOnlyPassing] = createSignal(true);
 
 /* ---- Toast notifications ---- */
 

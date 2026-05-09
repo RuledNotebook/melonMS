@@ -13,6 +13,7 @@ import {
   applyFilters,
   deconvolve,
   isTauri,
+  subscribeProgress,
 } from "../api/sidecar";
 import {
   deconvParams,
@@ -21,6 +22,7 @@ import {
   filterParams,
   pushToast,
   setDeconvError,
+  setDeconvProgress,
   setDeconvResult,
   setDeconvRunning,
   setFilterResult,
@@ -53,10 +55,22 @@ export async function runDeconvolution(opts: { silent?: boolean } = {}): Promise
   const myToken = ++deconvToken;
   setDeconvRunning(true);
   setDeconvError(null);
+  setDeconvProgress({ stage: "Starting…" });
 
   // Snapshot params so a mid-flight store change doesn't desync them from the
   // call's actual inputs.
   const params = { ...unwrap(deconvParams) };
+
+  // Subscribe to sidecar progress events for the duration of this call.
+  // When the sidecar.py emits a stage change, refresh the deconvProgress
+  // signal so the UI bar can update.
+  const unsub = await subscribeProgress((data) => {
+    setDeconvProgress({
+      stage: typeof data.stage === "string" ? data.stage : "Working…",
+      step: typeof data.step === "number" ? data.step : undefined,
+      steps: typeof data.steps === "number" ? data.steps : undefined,
+    });
+  });
 
   try {
     let result: DeconvResult;
@@ -84,8 +98,10 @@ export async function runDeconvolution(opts: { silent?: boolean } = {}): Promise
     if (!opts.silent) pushToast("error", `Deconvolution failed: ${msg}`);
     return false;
   } finally {
+    unsub();
     if (myToken === deconvToken) {
       setDeconvRunning(false);
+      setDeconvProgress(null);
       if (queuedRerun) {
         queuedRerun = false;
         // schedule a microtask so callers see a "stopped running" tick first

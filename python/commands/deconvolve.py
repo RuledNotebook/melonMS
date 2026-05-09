@@ -153,6 +153,10 @@ def _build_charge_envelope(
 
 
 def run(params: dict, emit=None) -> dict:
+    def _emit(stage, **kw):
+        if emit is not None:
+            emit({"stage": stage, **kw})
+
     spectrum_id = params.get("spectrum_id", "")
     mz_array = params.get("mz_array")
     intensity_array = params.get("intensity_array")
@@ -165,6 +169,8 @@ def run(params: dict, emit=None) -> dict:
         )
     if len(mz_array) < 4:
         raise ValueError("Spectrum is too short to deconvolve (need >= 4 points)")
+
+    _emit("Validating parameters", step=1, steps=5)
 
     cfg_in = dict(DEFAULTS)
     cfg_in.update(params.get("deconv_params") or {})
@@ -214,6 +220,8 @@ def run(params: dict, emit=None) -> dict:
     if nt > 0 and intensity.max() > 0:
         intensity = np.where(intensity < nt * intensity.max(), 0.0, intensity)
 
+    _emit("Preparing spectrum", step=2, steps=5)
+
     spec = Spectrum.from_arrays(mz, intensity)
 
     # background subtract ("none" -> skip; "linear"/"polynomial" -> local-quantile
@@ -231,6 +239,12 @@ def run(params: dict, emit=None) -> dict:
         )
 
     # ---- deconvolve ---------------------------------------------------------
+    n_iters = engine_kwargs["iterations"]
+    _emit(
+        f"Richardson-Lucy EM ({n_iters} iters)",
+        step=3,
+        steps=5,
+    )
     t0 = time.time()
     engine = DeconvEngine(**engine_kwargs)
     result = engine.deconvolve(spec, verbose=False)
@@ -243,14 +257,22 @@ def run(params: dict, emit=None) -> dict:
     # reading + iterations_run inference is good enough for the FE.
 
     # ---- peak finding + decoy FDR ------------------------------------------
+    _emit("Peak finding", step=4, steps=5)
     peaks = result.find_peaks(
         threshold_frac=max(float(cfg_in["noise_threshold"]), 0.005),
         min_distance_da=10.0,
     )
     n_decoys = max(0, int(cfg_in["n_decoys"]))
     if n_decoys > 0 and peaks:
+        _emit(
+            f"Decoy FDR ({n_decoys} decoys × {len(peaks)} peaks)",
+            step=5,
+            steps=5,
+        )
         validator = DecoyValidator(n_decoys=n_decoys, seed=int(cfg_in["seed"]))
         peaks = validator.validate(result, peaks, verbose=False)
+    else:
+        _emit("Assembling result", step=5, steps=5)
 
     r2 = result.reconstruction_r2()
 

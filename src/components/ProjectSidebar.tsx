@@ -8,6 +8,7 @@ import {
 import { runDeconvolution } from "../state/analysis";
 import {
   deconvParams,
+  deconvProgress,
   deconvRunning,
   loadProgress,
   loading,
@@ -31,44 +32,63 @@ import { LoadingBar } from "./LoadingBar";
 
 type Preset = "default" | "quick" | "high_res" | "wide_mass";
 
+/* Mass-grid size is the dominant runtime factor: cells = (mass_high -
+   mass_low) / mass_bin × (charge_high - charge_low). The defaults
+   inherited from DEFAULT_DECONV_PARAMS span 5–200 kDa with 1 Da bins,
+   which is ~9M cells and runs for several minutes per RL iteration on
+   a real spectrum. The presets below clamp to native-MS-realistic
+   ranges (8–80 kDa unless explicitly broad) so a typical run finishes
+   in seconds-to-tens-of-seconds, not minutes. */
+
 const PRESETS: Record<
   Preset,
   { label: string; description: string; params: DeconvParams }
 > = {
   default: {
     label: "Default — Tier-1 native",
-    description: "Balanced: 100 RL iterations, 1 Da mass bin, gaussian peak.",
-    params: { ...DEFAULT_DECONV_PARAMS },
+    description: "8–80 kDa, 1 Da bin, 60 RL iterations. ~30 s on a typical spectrum.",
+    params: {
+      ...DEFAULT_DECONV_PARAMS,
+      mass_low: 8_000,
+      mass_high: 80_000,
+      mass_bin: 1,
+      iterations: 60,
+    },
   },
   quick: {
     label: "Quick scan",
-    description: "Fast triage: 30 iterations, 2 Da bin. Good for a first look.",
+    description: "8–80 kDa, 2 Da bin, 25 iterations. First-look triage in ~5–10 s.",
     params: {
       ...DEFAULT_DECONV_PARAMS,
-      iterations: 30,
+      mass_low: 8_000,
+      mass_high: 80_000,
       mass_bin: 2,
+      iterations: 25,
       peak_fwhm: 0.6,
     },
   },
   high_res: {
     label: "High resolution",
-    description: "Slow + accurate: 250 iterations, 0.25 Da bin, tight FWHM.",
+    description: "8–80 kDa, 0.5 Da bin, 150 iterations. Slow + accurate.",
     params: {
       ...DEFAULT_DECONV_PARAMS,
-      iterations: 250,
-      mass_bin: 0.25,
+      mass_low: 8_000,
+      mass_high: 80_000,
+      mass_bin: 0.5,
+      iterations: 150,
       peak_fwhm: 0.3,
       convergence: 1e-6,
     },
   },
   wide_mass: {
     label: "Wide mass window",
-    description: "5–500 kDa search range. Pair with Quick scan for broad samples.",
+    description: "5–200 kDa, 2 Da bin, 40 iterations. Use to triage broad samples.",
     params: {
       ...DEFAULT_DECONV_PARAMS,
-      mass_low: 5000,
-      mass_high: 500_000,
+      mass_low: 5_000,
+      mass_high: 200_000,
       mass_bin: 2,
+      iterations: 40,
     },
   },
 };
@@ -326,19 +346,20 @@ export function ProjectSidebar() {
             const progressFraction = () => {
               const p = lp();
               if (!p) return undefined;
-              if (
-                typeof p.frame === "number" &&
-                typeof p.frames === "number" &&
-                p.frames > 0
-              ) {
-                // Frame loop is the dominant cost (~80% of total). Map
-                // frame progress into a 5–95% window so the bar still
-                // moves during the format-detect / open / downsample
-                // bookend stages.
-                return 0.05 + 0.9 * (p.frame / p.frames);
-              }
               if (typeof p.step === "number" && typeof p.steps === "number" && p.steps > 0) {
-                return p.step / p.steps;
+                // Stage K of N: bar between (K-1)/N and K/N. Within a
+                // stage with frame counts, refine smoothly. The last
+                // stage of the run is treated as fully complete (we
+                // don't get a "stage-finished" emit, only the start).
+                let inStep = p.step === p.steps ? 1 : 0.5;
+                if (
+                  typeof p.frame === "number" &&
+                  typeof p.frames === "number" &&
+                  p.frames > 0
+                ) {
+                  inStep = p.frame / p.frames;
+                }
+                return Math.min(1, ((p.step - 1) + inStep) / p.steps);
               }
               return undefined;
             };
@@ -493,6 +514,44 @@ export function ProjectSidebar() {
                 <span>Running…</span>
               </Show>
             </button>
+
+            <Show when={deconvRunning()}>
+              {(() => {
+                const progressFraction = () => {
+                  const p = deconvProgress();
+                  if (
+                    p &&
+                    typeof p.step === "number" &&
+                    typeof p.steps === "number" &&
+                    p.steps > 0
+                  ) {
+                    // Same scheme as the load bar: stage K of N maps to
+                    // (K-1)/N..K/N; the last stage uses inStep=1 so the
+                    // bar reaches 100% rather than plateauing at 80%
+                    // until Python returns and the bar unmounts.
+                    const inStep = p.step === p.steps ? 1 : 0.5;
+                    return Math.min(1, ((p.step - 1) + inStep) / p.steps);
+                  }
+                  return undefined;
+                };
+                const subline = () => {
+                  const p = deconvProgress();
+                  if (!p) return undefined;
+                  if (typeof p.step === "number" && typeof p.steps === "number") {
+                    return `step ${p.step}/${p.steps}`;
+                  }
+                  return undefined;
+                };
+                return (
+                  <LoadingBar
+                    label={deconvProgress()?.stage ?? "Deconvolving…"}
+                    sublabel={subline()}
+                    progress={progressFraction()}
+                    expectedSeconds={20}
+                  />
+                );
+              })()}
+            </Show>
           </div>
         </Show>
       </div>

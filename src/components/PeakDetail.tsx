@@ -56,6 +56,23 @@ function fmt(n: number, digits = 2): string {
   return n.toFixed(digits);
 }
 
+/* Native MS masses are routinely 5–80 kDa, so default to kDa with 3
+   decimals (≈1 Da resolution). Sub-kDa masses (deltas, small subunits)
+   stay in Da. */
+function fmtMassKDa(da: number, digits = 3): string {
+  if (Number.isNaN(da) || !Number.isFinite(da)) return "—";
+  return (da / 1000).toFixed(digits);
+}
+
+function fmtDelta(da: number, digits = 1): string {
+  if (Number.isNaN(da) || !Number.isFinite(da)) return "—";
+  // Small deltas read better in Da; multi-kDa deltas in kDa.
+  if (Math.abs(da) >= 1000) {
+    return `${da >= 0 ? "+" : ""}${(da / 1000).toFixed(digits)} kDa`;
+  }
+  return `${da >= 0 ? "+" : ""}${da.toFixed(digits)} Da`;
+}
+
 function PassBadge(props: { label: string; pass?: boolean | undefined }) {
   return (
     <span
@@ -166,17 +183,17 @@ export function PeakDetail() {
       },
       axes: [
         {
-          stroke: "#b1bac4",
-          grid: { stroke: "#2d343d", width: 1 },
-          ticks: { stroke: "#2d343d" },
+          stroke: "#c8c8c8",
+          grid: { stroke: "rgba(255,255,255,0.08)", width: 1 },
+          ticks: { stroke: "rgba(255,255,255,0.08)" },
           font: "10px ui-monospace, monospace",
           incrs: [1, 2, 5, 10],
           values: (_u, ticks) => ticks.map((t) => String(Math.round(t))),
         },
         {
-          stroke: "#b1bac4",
-          grid: { stroke: "#2d343d", width: 1 },
-          ticks: { stroke: "#2d343d" },
+          stroke: "#c8c8c8",
+          grid: { stroke: "rgba(255,255,255,0.08)", width: 1 },
+          ticks: { stroke: "rgba(255,255,255,0.08)" },
           font: "10px ui-monospace, monospace",
           values: (_u, ticks) =>
             ticks.map((t) => {
@@ -191,8 +208,8 @@ export function PeakDetail() {
         { label: "z" },
         {
           label: "intensity",
-          stroke: "#58a6ff",
-          fill: "rgba(88,166,255,0.2)",
+          stroke: "#88ff81",
+          fill: "rgba(0,209,8,0.18)",
           width: 1,
           spanGaps: false,
           points: { show: false },
@@ -213,15 +230,15 @@ export function PeakDetail() {
         {(p) => (
           <>
             <div class="peakdetail__mass">
-              <strong>{fmt(p().mass, 1)}</strong>
-              <span class="unit">Da</span>
+              <strong>{fmtMassKDa(p().mass)}</strong>
+              <span class="unit">kDa</span>
               <Show when={nearest()}>
                 {(n) => (
                   <span
                     class="peakdetail__delta"
-                    title={`Nearest paper baseline: ${n().name} @ ${n().mass} Da`}
+                    title={`Nearest paper baseline: ${n().name} @ ${fmtMassKDa(n().mass)} kDa`}
                   >
-                    Δ {n().delta >= 0 ? "+" : ""}{fmt(n().delta, 1)} Da from {n().name.split(" ")[0]}
+                    Δ {fmtDelta(n().delta)} from {n().name.split(" ")[0]}
                   </span>
                 )}
               </Show>
@@ -277,8 +294,7 @@ export function PeakDetail() {
                   <div class="v">
                     {id().name}
                     <span class="peakdetail__delta">
-                      {" "}@ {id().mass} Da · Δ {id().delta >= 0 ? "+" : ""}
-                      {fmt(id().delta, 1)} Da
+                      {" "}@ {fmtMassKDa(id().mass)} kDa · Δ {fmtDelta(id().delta)}
                     </span>
                   </div>
                 )}

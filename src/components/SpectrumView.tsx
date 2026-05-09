@@ -113,7 +113,9 @@ export function SpectrumView() {
           points: { show: false },
         },
       ],
-      legend: { show: true, live: true },
+      // Header already carries the file/calibration meta; suppress the
+      // bottom legend so it can't be clipped on small viewports.
+      legend: { show: false },
     };
 
     plotInstance = new uPlot(opts, data, plotEl);
@@ -147,18 +149,19 @@ export function SpectrumView() {
                   const p = loadProgress();
                   if (!p) return undefined;
                   if (
-                    typeof p.frame === "number" &&
-                    typeof p.frames === "number" &&
-                    p.frames > 0
-                  ) {
-                    return 0.05 + 0.9 * (p.frame / p.frames);
-                  }
-                  if (
                     typeof p.step === "number" &&
                     typeof p.steps === "number" &&
                     p.steps > 0
                   ) {
-                    return p.step / p.steps;
+                    let inStep = p.step === p.steps ? 1 : 0.5;
+                    if (
+                      typeof p.frame === "number" &&
+                      typeof p.frames === "number" &&
+                      p.frames > 0
+                    ) {
+                      inStep = p.frame / p.frames;
+                    }
+                    return Math.min(1, ((p.step - 1) + inStep) / p.steps);
                   }
                   return undefined;
                 };

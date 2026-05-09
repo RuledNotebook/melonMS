@@ -59,6 +59,109 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ---- Custom scrollbars ----
+   `-webkit-appearance: none` is the magic line that disables macOS's
+   translucent overlay scrollbar (the "oval" the user sees) and lets
+   our pseudo-element rules actually paint. Without it the system
+   styling wins regardless of what we set on `width`/`background`. */
+
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  background: var(--bg-1);
+}
+
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: var(--bg-1);
+  border-left: 1px solid var(--line);
+}
+
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: var(--bg-3);
+  border-radius: 0;
+  border: 2px solid var(--bg-1);
+  min-height: 28px;
+  transition: background 120ms;
+}
+
+::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--melon-pink);
+}
+
+::-webkit-scrollbar-thumb:active,
+*::-webkit-scrollbar-thumb:active {
+  background: var(--melon-leaf);
+}
+
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  background: var(--bg-1);
+}
+
+/* Firefox fallback. WebKit ignores these. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-3) var(--bg-1);
+}
+
+/* ---- Custom checkbox ----
+   Round dot, no checkmark. Empty = hollow circle, checked = solid
+   leaf-green. `appearance: none` strips macOS's native render so our
+   styles actually paint. */
+
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--bg-1);
+  cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
+  transition: background 100ms, border-color 100ms;
+}
+
+input[type="checkbox"]:hover:not(:disabled) {
+  border-color: var(--melon-mint);
+}
+
+input[type="checkbox"]:checked {
+  background: var(--melon-leaf);
+  border-color: var(--melon-leaf);
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 24, 93, 0.35);
+}
+
+input[type="checkbox"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- Number input ----
+   Strip the OS up/down spinner. Users can still scroll-wheel or type;
+   the native arrows look out-of-place in a dark panel. */
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 button {
   font: inherit;
   color: inherit;
@@ -473,14 +576,19 @@ code {
   border: 1px solid var(--line);
 }
 
-/* Always-full-width gradient. Direct pink → leaf, no white in the middle. */
+/* Direct pink → leaf gradient. We interpolate in OKLCH using the
+   longer-hue path so the midpoint never drops to gray/black and never
+   passes through olive/yellow — the gradient travels around the cool
+   side of the color wheel (magenta → purple → blue → teal) at a
+   uniform perceptual saturation. WebKit 17.4+ supports this; Tauri's
+   bundled webview on macOS 14.4+ does. */
 .loadingbar__gradient {
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    90deg,
-    var(--melon-pink) 0%,
-    var(--melon-leaf) 100%
+    in oklch longer hue 90deg,
+    var(--melon-pink),
+    var(--melon-leaf)
   );
 }
 
@@ -1129,6 +1237,7 @@ code {
   grid-template-rows: 1fr;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .app__centersplit {
