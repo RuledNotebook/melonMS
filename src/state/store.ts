@@ -78,6 +78,16 @@ export const [selectedMass, setSelectedMass] = createSignal<number | null>(null)
    header so the user can flip it for context. */
 export const [showOnlyPassing, setShowOnlyPassing] = createSignal(true);
 
+/* ---- Run-mode toggles ----
+   `quickFDR` overrides n_decoys to 20 for fast preview (vs. 200 for
+   full FDR). FDR precision drops to ~5% but wall-clock drops ~10×,
+   which is the right tradeoff while tuning parameters. Switch off for
+   final/publication runs.
+   `livePreview` gates the debounced auto-rerun on parameter changes —
+   when off, the user must explicitly click Run after editing params. */
+export const [quickFDR, setQuickFDR] = createSignal(true);
+export const [livePreview, setLivePreview] = createSignal(true);
+
 /* ---- Toast notifications ---- */
 
 const [toasts, setToasts] = createSignal<Toast[]>([]);

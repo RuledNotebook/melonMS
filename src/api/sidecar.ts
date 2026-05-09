@@ -118,10 +118,16 @@ export interface DeconvolveCallParams {
   mz: number[];
   intensity: number[];
   params: DeconvParams;
+  /** Override n_decoys (default sidecar value 200). Set to 20 for
+      Quick-FDR preview mode. */
+  n_decoys?: number;
 }
 
-function toEngineDeconvParams(p: DeconvParams): Record<string, unknown> {
-  return {
+function toEngineDeconvParams(
+  p: DeconvParams,
+  n_decoys?: number
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {
     mass_low: p.mass_low,
     mass_high: p.mass_high,
     charge_low: p.charge_low,
@@ -136,6 +142,8 @@ function toEngineDeconvParams(p: DeconvParams): Record<string, unknown> {
     background: p.background_subtraction ? "linear" : "none",
     noise_threshold: p.noise_threshold,
   };
+  if (typeof n_decoys === "number") out.n_decoys = n_decoys;
+  return out;
 }
 
 export async function deconvolve(
@@ -144,7 +152,7 @@ export async function deconvolve(
   return sidecarCall<DeconvResult>("deconvolve", {
     mz_array: args.mz,
     intensity_array: args.intensity,
-    deconv_params: toEngineDeconvParams(args.params),
+    deconv_params: toEngineDeconvParams(args.params, args.n_decoys),
   });
 }
 

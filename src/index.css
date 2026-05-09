@@ -949,6 +949,28 @@ code {
   gap: 8px;
 }
 
+.sidebar__deconv-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.sidebar__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim, #aaa);
+  cursor: pointer;
+  user-select: none;
+}
+
+.sidebar__toggle input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
 .sidebar__run {
   background: var(--melon-leaf);
   color: #000;

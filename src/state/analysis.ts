@@ -20,7 +20,9 @@ import {
   deconvResult,
   deconvRunning,
   filterParams,
+  livePreview,
   pushToast,
+  quickFDR,
   setDeconvError,
   setDeconvProgress,
   setDeconvResult,
@@ -79,6 +81,7 @@ export async function runDeconvolution(opts: { silent?: boolean } = {}): Promise
         mz: s.mz,
         intensity: s.intensity,
         params,
+        n_decoys: quickFDR() ? 20 : 200,
       });
     } else {
       // Browser dev: synthesize a plausible mass list so the UI is exercisable
@@ -113,13 +116,16 @@ export async function runDeconvolution(opts: { silent?: boolean } = {}): Promise
 
 /* Debounced auto re-run when deconv params change (800ms window). Only
    triggers once the user has explicitly run deconv at least once — otherwise
-   adjusting parameters before the first run would auto-fire. */
+   adjusting parameters before the first run would auto-fire. Also gated on
+   the `livePreview` toggle: when off, the user must manually click Run after
+   editing params (useful when in Full FDR mode where each run takes ~5min). */
 export function scheduleDeconvRerun() {
   if (deconvDebounce) clearTimeout(deconvDebounce);
   deconvDebounce = setTimeout(() => {
     deconvDebounce = null;
     if (!spectrum()) return;
     if (!deconvResult()) return;
+    if (!livePreview()) return;
     runDeconvolution({ silent: true });
   }, 800);
 }

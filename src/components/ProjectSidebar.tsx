@@ -10,13 +10,17 @@ import {
   deconvParams,
   deconvProgress,
   deconvRunning,
+  livePreview,
   loadProgress,
   loading,
   pushToast,
+  quickFDR,
   setDeconvParams,
   setError,
+  setLivePreview,
   setLoading,
   setLoadProgress,
+  setQuickFDR,
   setSpectrum,
   spectrum,
 } from "../state/store";
@@ -501,6 +505,30 @@ export function ProjectSidebar() {
               )}
               onChange={(v) => applyPreset(v)}
             />
+            <div class="sidebar__deconv-toggles">
+              <label
+                class="sidebar__toggle"
+                title="Quick: 20 decoys (~10× faster, ~5% FDR precision). Off: 200 decoys, full FDR for final/publication runs."
+              >
+                <input
+                  type="checkbox"
+                  checked={quickFDR()}
+                  onChange={(e) => setQuickFDR(e.currentTarget.checked)}
+                />
+                <span>Quick FDR</span>
+              </label>
+              <label
+                class="sidebar__toggle"
+                title="Auto re-run deconvolution after parameter changes. Turn off when running Full FDR (manual run only)."
+              >
+                <input
+                  type="checkbox"
+                  checked={livePreview()}
+                  onChange={(e) => setLivePreview(e.currentTarget.checked)}
+                />
+                <span>Live preview</span>
+              </label>
+            </div>
             <button
               class="sidebar__run"
               disabled={deconvRunning() || loading()}
@@ -508,7 +536,12 @@ export function ProjectSidebar() {
             >
               <Show
                 when={deconvRunning()}
-                fallback={<span>Run Deconvolution</span>}
+                fallback={
+                  <span>
+                    Run Deconvolution
+                    {!quickFDR() ? " (Full FDR ~5 min)" : ""}
+                  </span>
+                }
               >
                 <span class="sidebar__run-spinner" />
                 <span>Running…</span>
