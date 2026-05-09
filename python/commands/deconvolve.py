@@ -152,7 +152,7 @@ def _build_charge_envelope(
     return out
 
 
-def run(params: dict) -> dict:
+def run(params: dict, emit=None) -> dict:
     spectrum_id = params.get("spectrum_id", "")
     mz_array = params.get("mz_array")
     intensity_array = params.get("intensity_array")

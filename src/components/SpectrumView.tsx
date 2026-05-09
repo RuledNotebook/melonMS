@@ -1,7 +1,8 @@
 import { createEffect, onCleanup, onMount, Show } from "solid-js";
 import uPlot from "uplot";
 import type { Options as UPlotOptions } from "uplot";
-import { error, loading, spectrum } from "../state/store";
+import { error, loadProgress, loading, spectrum } from "../state/store";
+import { LoadingBar } from "./LoadingBar";
 
 /* uPlot wrapper.
 
@@ -14,13 +15,22 @@ export function SpectrumView() {
   let plotEl!: HTMLDivElement;
   let plotInstance: uPlot | null = null;
   let resizeObserver: ResizeObserver | null = null;
+  let lastSize = { w: 0, h: 0 };
 
   onMount(() => {
+    // Round to whole pixels and ignore no-op deltas so that micro-jitter
+    // (sub-pixel layout shifts, or the plot canvas itself triggering a
+    // 1-px reflow) can't kick off a setSize feedback loop. Without this
+    // guard the plot's own redraw can grow the parent by a fraction
+    // each frame, which manifests as the y-axis label slowly drifting.
     resizeObserver = new ResizeObserver(() => {
       if (!plotInstance || !plotEl) return;
-      const w = plotEl.clientWidth;
-      const h = plotEl.clientHeight;
-      if (w > 0 && h > 0) plotInstance.setSize({ width: w, height: h });
+      const w = Math.round(plotEl.clientWidth);
+      const h = Math.round(plotEl.clientHeight);
+      if (w <= 0 || h <= 0) return;
+      if (w === lastSize.w && h === lastSize.h) return;
+      lastSize = { w, h };
+      plotInstance.setSize({ width: w, height: h });
     });
     resizeObserver.observe(plotEl);
   });
@@ -33,16 +43,26 @@ export function SpectrumView() {
 
   createEffect(() => {
     const s = spectrum();
-    if (!s || !plotEl) return;
 
-    // Destroy and rebuild on each new spectrum. Cheap for v0 (<1M points).
+    // Always tear the previous plot down first, including when the
+    // spectrum is cleared (s == null) — otherwise an old chart can sit
+    // underneath the loading overlay and continue receiving resize
+    // events.
     plotInstance?.destroy();
     plotInstance = null;
+    lastSize = { w: 0, h: 0 };
+
+    if (!s || !plotEl) return;
 
     const data: uPlot.AlignedData = [
       Float64Array.from(s.mz),
       Float64Array.from(s.intensity),
     ];
+
+    const axisStroke = "#c8c8c8";
+    const gridStroke = "rgba(255,255,255,0.08)";
+    const seriesStroke = "#00d108";
+    const seriesFill = "rgba(0,209,8,0.14)";
 
     const opts: UPlotOptions = {
       width: plotEl.clientWidth || 800,
@@ -58,18 +78,18 @@ export function SpectrumView() {
       },
       axes: [
         {
-          stroke: "#b1bac4",
-          grid: { stroke: "#2d343d", width: 1 },
-          ticks: { stroke: "#2d343d" },
+          stroke: axisStroke,
+          grid: { stroke: gridStroke, width: 1 },
+          ticks: { stroke: gridStroke },
           label: "m/z",
           labelSize: 22,
           labelFont: "12px ui-monospace, monospace",
           font: "11px ui-monospace, monospace",
         },
         {
-          stroke: "#b1bac4",
-          grid: { stroke: "#2d343d", width: 1 },
-          ticks: { stroke: "#2d343d" },
+          stroke: axisStroke,
+          grid: { stroke: gridStroke, width: 1 },
+          ticks: { stroke: gridStroke },
           label: "intensity",
           labelSize: 30,
           labelFont: "12px ui-monospace, monospace",
@@ -87,9 +107,9 @@ export function SpectrumView() {
         { label: "m/z" },
         {
           label: "intensity",
-          stroke: "#58a6ff",
+          stroke: seriesStroke,
           width: 1,
-          fill: "rgba(88,166,255,0.12)",
+          fill: seriesFill,
           points: { show: false },
         },
       ],
@@ -121,10 +141,63 @@ export function SpectrumView() {
       <div class="spectrum__plot" ref={plotEl}>
         <Show when={loading()}>
           <div class="spectrum__loading">
-            <div class="spinner" />
-            <div>Reading .d folder and computing calibrated spectrum…</div>
-            <div class="note" style={{ "margin-top": "10px" }}>
-              First load on a large dataset can take 10–60s.
+            <div class="spectrum__loading-bar">
+              {(() => {
+                const progressFraction = () => {
+                  const p = loadProgress();
+                  if (!p) return undefined;
+                  if (
+                    typeof p.frame === "number" &&
+                    typeof p.frames === "number" &&
+                    p.frames > 0
+                  ) {
+                    return 0.05 + 0.9 * (p.frame / p.frames);
+                  }
+                  if (
+                    typeof p.step === "number" &&
+                    typeof p.steps === "number" &&
+                    p.steps > 0
+                  ) {
+                    return p.step / p.steps;
+                  }
+                  return undefined;
+                };
+                const subline = () => {
+                  const p = loadProgress();
+                  if (!p) return undefined;
+                  const parts: string[] = [];
+                  if (
+                    typeof p.frame === "number" &&
+                    typeof p.frames === "number"
+                  ) {
+                    parts.push(
+                      `frame ${p.frame.toLocaleString()} / ${p.frames.toLocaleString()}`
+                    );
+                  }
+                  if (
+                    typeof p.step === "number" &&
+                    typeof p.steps === "number"
+                  ) {
+                    parts.push(`step ${p.step}/${p.steps}`);
+                  }
+                  return parts.length ? parts.join(" · ") : undefined;
+                };
+                return (
+                  <LoadingBar
+                    label={
+                      loadProgress()?.stage ??
+                      "Reading .d folder and computing calibrated spectrum…"
+                    }
+                    sublabel={subline()}
+                    progress={progressFraction()}
+                    expectedSeconds={90}
+                  />
+                );
+              })()}
+            </div>
+            <div class="note" style={{ "margin-top": "12px" }}>
+              Live progress streams from the Python sidecar.
+              The Reading-frames stage dominates total runtime for large .d folders.
             </div>
           </div>
         </Show>
@@ -142,7 +215,12 @@ export function SpectrumView() {
           <div class="spectrum__empty">
             <div style={{ "font-size": "32px", opacity: 0.4 }}>m/z</div>
             <div style={{ "margin-top": "8px" }}>
-              Drop a Bruker <code>.d</code> folder to render the calibrated spectrum.
+              Drop a Bruker <code>.d</code> folder in the left sidebar
+              to render the calibrated spectrum.
+            </div>
+            <div class="note" style={{ "margin-top": "10px" }}>
+              Drag-select a region of the plot to zoom in.
+              Double-click to reset.
             </div>
           </div>
         </Show>

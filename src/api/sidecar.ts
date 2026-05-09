@@ -62,7 +62,7 @@ export async function loadSpectrum(
 }
 
 /* Walks a parent folder and returns the list of `.d` subdirectories so the
-   DropZone can show an inline sample picker for multi-acquisition workflows.
+   sidebar can show an inline sample picker for multi-acquisition workflows.
    See python/commands/list_d_folders.py for the contract. */
 export async function listDFolders(path: string): Promise<ListDFoldersResult> {
   return call<ListDFoldersResult>("sidecar_call", {
@@ -77,6 +77,35 @@ export async function sidecarCall<T = unknown>(
   params: Record<string, unknown> = {}
 ): Promise<T> {
   return call<T>("sidecar_call", { command, params });
+}
+
+/* ---- Progress events ----
+   The Python sidecar can emit interim "progress" events while a long
+   command runs (load_spectrum streams stage + frame counts). The Rust
+   reader thread forwards them as Tauri events on the channel
+   "sidecar-progress". This helper wraps event subscription so callers
+   don't need to import @tauri-apps/api/event directly. */
+export interface SidecarProgressData {
+  stage?: string;
+  step?: number;
+  steps?: number;
+  frame?: number;
+  frames?: number;
+  [key: string]: unknown;
+}
+
+export async function subscribeProgress(
+  cb: (data: SidecarProgressData) => void
+): Promise<() => void> {
+  if (!isTauri()) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  const unlisten = await listen<{ id: string; data: SidecarProgressData }>(
+    "sidecar-progress",
+    (e) => {
+      if (e.payload?.data) cb(e.payload.data);
+    }
+  );
+  return unlisten;
 }
 
 /* ---- v1: deconvolution ----

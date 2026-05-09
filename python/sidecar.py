@@ -8,12 +8,20 @@ output goes to stderr so it never pollutes the protocol stream.
 Protocol
 --------
 Request:  {"id": "<uuid>", "command": "<name>", "params": {...}}
-Response: {"id": "<uuid>", "ok": true,  "result": {...}}
-          {"id": "<uuid>", "ok": false, "error": {"type": "...", "message": "..."}}
+
+Response (final, exactly one per request):
+  {"id": "<uuid>", "ok": true,  "result": {...}}
+  {"id": "<uuid>", "ok": false, "error": {"type": "...", "message": "..."}}
+
+Optional interim progress events (zero or more per request, before final):
+  {"id": "<uuid>", "event": "progress", "data": {"stage": "...", ...}}
 
 Adding a new command
 --------------------
-1. Drop a module under python/commands/<name>.py exposing `run(params: dict) -> dict`.
+1. Drop a module under python/commands/<name>.py exposing
+   `run(params: dict, emit=None) -> dict`. The optional `emit` callable
+   takes a JSON-safe dict and writes a progress event to stdout; ignore
+   it for fast commands that don't need to stream.
 2. Register it in COMMAND_REGISTRY below.
 """
 from __future__ import annotations
@@ -51,7 +59,7 @@ COMMAND_REGISTRY = {
     "deconvolve": deconvolve.run,
     "apply_filters": apply_filters.run,
     "list_d_folders": list_d_folders.run,
-    "ping": lambda params: {"pong": True, "echo": params},
+    "ping": lambda params, emit=None: {"pong": True, "echo": params},
 }
 
 
@@ -63,6 +71,15 @@ def log(msg: str) -> None:
 def write_response(payload: dict) -> None:
     sys.stdout.write(json.dumps(payload) + "\n")
     sys.stdout.flush()
+
+
+def _emit_progress(req_id: str | None, data: dict) -> None:
+    """Send an interim progress event for an in-flight request. Final
+    responses are still owned by handle_request — emit is for streaming
+    stage/percent updates while a long command runs."""
+    if req_id is None:
+        return
+    write_response({"id": req_id, "event": "progress", "data": data})
 
 
 def handle_request(req: dict) -> dict:
@@ -80,8 +97,10 @@ def handle_request(req: dict) -> dict:
             },
         }
 
+    emit = lambda data: _emit_progress(req_id, data)
+
     try:
-        result = COMMAND_REGISTRY[cmd_name](params)
+        result = COMMAND_REGISTRY[cmd_name](params, emit=emit)
         return {"id": req_id, "ok": True, "result": result}
     except Exception as e:  # noqa: BLE001 - sidecar must never crash on bad input
         return {

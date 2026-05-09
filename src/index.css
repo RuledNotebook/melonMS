@@ -1,20 +1,37 @@
-/*  Troponin TDMS app — base layout and dark theme.
-    Kept lean: no CSS framework. Hand-tuned dark palette so spectra read clearly. */
+/*  melonMS — base layout + watermelon palette.
+    Pink accent (#ff185d) on a black canvas, with a green family
+    (#00d108 vivid · #88ff81 mint · #d4ffd1 rind) carrying signal data
+    and primary actions. */
 
 :root {
-  --bg-0: #0d1117;
-  --bg-1: #161b22;
-  --bg-2: #1f242c;
-  --bg-3: #2a313a;
-  --line: #2d343d;
-  --text-0: #e6edf3;
-  --text-1: #b1bac4;
-  --text-2: #7d8590;
-  --accent: #6cf;
-  --accent-strong: #58a6ff;
-  --warn: #f0b04a;
-  --error: #f85149;
-  --success: #3fb950;
+  /* Watermelon palette */
+  --melon-pink: #ff185d;
+  --melon-leaf: #00d108;
+  --melon-mint: #88ff81;
+  --melon-rind: #d4ffd1;
+
+  /* Black-leaning surfaces */
+  --bg-0: #000000;
+  --bg-1: #0c0c0c;
+  --bg-2: #141414;
+  --bg-3: #1d1d1d;
+
+  /* Lines / dividers */
+  --line:        rgba(255, 255, 255, 0.10);
+  --line-strong: rgba(255, 255, 255, 0.22);
+
+  /* Text ramp on black */
+  --text-0: #ffffff;
+  --text-1: #c8c8c8;
+  --text-2: #7a7a7a;
+
+  /* Semantic remap (existing components read these names) */
+  --accent:        var(--melon-pink);
+  --accent-strong: var(--melon-pink);
+  --warn:          var(--melon-pink);
+  --error:         var(--melon-pink);
+  --success:       var(--melon-leaf);
+
   --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", "Cascadia Mono",
     Menlo, Consolas, monospace;
 }
@@ -50,11 +67,13 @@ button {
   border-radius: 4px;
   padding: 4px 10px;
   cursor: pointer;
+  transition: background 100ms, border-color 100ms, color 100ms;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: var(--bg-3);
-  border-color: var(--accent-strong);
+  border-color: var(--melon-mint);
+  color: var(--melon-mint);
 }
 
 button:disabled {
@@ -63,50 +82,201 @@ button:disabled {
 }
 
 input[type="number"],
+input[type="text"],
 select {
   background: var(--bg-1);
   color: var(--text-0);
   border: 1px solid var(--line);
   border-radius: 4px;
-  padding: 3px 6px;
+  padding: 4px 6px;
   font: inherit;
   width: 90px;
 }
 
 input[type="number"]:focus,
+input[type="text"]:focus,
 select:focus {
   outline: none;
-  border-color: var(--accent-strong);
+  border-color: var(--melon-pink);
+  box-shadow: 0 0 0 2px rgba(255, 24, 93, 0.18);
+}
+
+select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-1) 50%),
+    linear-gradient(-45deg, transparent 50%, var(--text-1) 50%);
+  background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 26px;
+}
+
+/* ---- Custom Dropdown ---- */
+
+.dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.dropdown__trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-1);
+  color: var(--text-0);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color 100ms, box-shadow 100ms;
+}
+
+.dropdown__trigger:hover {
+  background: var(--bg-2);
+  border-color: var(--melon-mint);
+  color: var(--text-0);
+}
+
+.dropdown__trigger.is-open {
+  border-color: var(--melon-pink);
+  box-shadow: 0 0 0 2px rgba(255, 24, 93, 0.20);
+  color: var(--text-0);
+}
+
+.dropdown__trigger-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.dropdown__chevron {
+  font-size: 10px;
+  color: var(--text-2);
+  margin-left: 8px;
+  transition: transform 120ms, color 120ms;
+}
+
+.dropdown__trigger.is-open .dropdown__chevron {
+  transform: rotate(180deg);
+  color: var(--melon-pink);
+}
+
+.dropdown__panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65);
+  z-index: 50;
+  overflow: hidden;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.dropdown__option {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 10px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--text-0);
+  font: inherit;
+  border-radius: 0;
+}
+
+.dropdown__option:last-child {
+  border-bottom: none;
+}
+
+.dropdown__option:hover {
+  background: rgba(136, 255, 129, 0.10);
+  color: var(--text-0);
+}
+
+.dropdown__option.is-selected {
+  background: rgba(0, 209, 8, 0.10);
+  border-left: 2px solid var(--melon-leaf);
+  padding-left: 8px;
+}
+
+.dropdown__option.is-selected .dropdown__option-label {
+  color: var(--melon-leaf);
+}
+
+.dropdown__option-label {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-0);
+}
+
+.dropdown__option-desc {
+  font-size: 11px;
+  color: var(--text-2);
+  font-family: var(--mono);
+  line-height: 1.35;
+  white-space: normal;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.92em;
+  color: var(--melon-mint);
+  background: rgba(136, 255, 129, 0.08);
+  padding: 0 4px;
+  border-radius: 3px;
 }
 
 /* ---- top-level layout ---- */
 
 .app {
   display: grid;
-  grid-template-rows: 36px 36px 1fr 24px;
+  grid-template-rows: 36px 32px 1fr 24px;
   height: 100vh;
 }
 
 .app__titlebar {
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 14px;
   background: var(--bg-1);
   border-bottom: 1px solid var(--line);
-  font-weight: 600;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
   user-select: none;
 }
 
+.app__brand {
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--melon-pink);
+  letter-spacing: 0.6px;
+}
+
 .app__titlebar small {
-  margin-left: 10px;
+  margin-left: 12px;
   color: var(--text-2);
   font-weight: 400;
+  font-family: var(--mono);
+  font-size: 11px;
 }
 
 .app__main {
   display: grid;
-  grid-template-columns: 280px 1fr 320px;
+  grid-template-columns: 320px 1fr 320px;
   min-height: 0;
 }
 
@@ -129,38 +299,27 @@ select:focus {
   margin-right: 6px;
   display: inline-block;
 }
-.app__statusbar .dot.idle {
-  background: var(--text-2);
-}
+.app__statusbar .dot.idle { background: var(--text-2); }
 .app__statusbar .dot.busy {
-  background: var(--warn);
+  background: var(--melon-pink);
   animation: pulse 1s infinite ease-in-out;
 }
-.app__statusbar .dot.ok {
-  background: var(--success);
-}
-.app__statusbar .dot.err {
-  background: var(--error);
-}
+.app__statusbar .dot.ok  { background: var(--melon-leaf); }
+.app__statusbar .dot.err { background: var(--melon-pink); }
 
 @keyframes pulse {
   0%, 100% { opacity: 0.4; }
   50%      { opacity: 1; }
 }
 
-/* ---- panes ---- */
+/* ---- panes (right FilterPane) ---- */
 
 .pane {
   background: var(--bg-1);
-  border-right: 1px solid var(--line);
+  border-left: 1px solid var(--line);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-}
-
-.pane:last-of-type {
-  border-right: none;
-  border-left: 1px solid var(--line);
 }
 
 .pane__header {
@@ -192,8 +351,8 @@ select:focus {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text-2);
-  font-weight: 600;
+  color: var(--melon-pink);
+  font-weight: 700;
 }
 
 .row {
@@ -275,29 +434,454 @@ select:focus {
 }
 
 .spectrum__error {
-  color: var(--error);
+  color: var(--melon-pink);
 }
 
 .spectrum__loading .spinner {
   width: 22px;
   height: 22px;
   border: 2px solid var(--bg-3);
-  border-top-color: var(--accent);
+  border-top-color: var(--melon-leaf);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-bottom: 12px;
+}
+
+.spectrum__loading-bar {
+  width: min(440px, 80%);
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-/* ---- DropZone ---- */
+/* ---- LoadingBar (pink → leaf gradient, determinate fill) ---- */
+
+.loadingbar {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.loadingbar__rail {
+  position: relative;
+  height: 6px;
+  background: var(--bg-3);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+/* Always-full-width gradient. Direct pink → leaf, no white in the middle. */
+.loadingbar__gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    var(--melon-pink) 0%,
+    var(--melon-leaf) 100%
+  );
+}
+
+/* Cover hides the unfilled portion. Pinned to the right edge so its width
+   is "100% - progress". Shrinks as progress advances. */
+.loadingbar__cover {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  background: var(--bg-3);
+  transition: width 200ms ease-out;
+}
+
+/* Time-driven mode: cover shrinks from full to ~10% over the expected
+   duration with an ease-out so the bar feels productive early then
+   asymptotes (never declares "done" without the real op finishing). */
+.loadingbar--time .loadingbar__cover {
+  animation: loadingbar-fill var(--loadingbar-duration, 30s) ease-out forwards;
+  animation-duration: inherit;
+}
+
+@keyframes loadingbar-fill {
+  0%   { width: 100%; }
+  10%  { width: 65%; }
+  40%  { width: 32%; }
+  100% { width: 10%; }
+}
+
+.loadingbar__label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-1);
+  letter-spacing: 0.2px;
+}
+
+.loadingbar__sublabel {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-2);
+  letter-spacing: 0.2px;
+}
+
+/* ---- Left ProjectSidebar ---- */
+
+.sidebar {
+  background: var(--bg-1);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.sidebar__brand {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-1);
+  flex: 1;
+}
+
+.sidebar__new {
+  background: var(--melon-pink);
+  color: #000;
+  border: 1px solid var(--melon-pink);
+  font-weight: 700;
+  font-size: 11px;
+  padding: 4px 10px;
+  letter-spacing: 0.3px;
+}
+
+.sidebar__new:hover:not(:disabled) {
+  background: #ff4078;
+  border-color: #ff4078;
+  color: #000;
+}
+
+.sidebar__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sidebar__drop {
+  border: 2px dashed var(--line-strong);
+  border-radius: 8px;
+  padding: 22px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  text-align: center;
+  user-select: none;
+  transition: border-color 120ms, background 120ms, transform 80ms;
+  background: var(--bg-1);
+}
+
+.sidebar__drop:hover {
+  border-color: var(--melon-mint);
+  background: rgba(136, 255, 129, 0.04);
+}
+
+.sidebar__drop.is-active {
+  border-color: var(--melon-leaf);
+  background: rgba(0, 209, 8, 0.10);
+  transform: scale(1.005);
+}
+
+.sidebar__drop-icon {
+  font-size: 22px;
+  color: var(--melon-leaf);
+  opacity: 0.85;
+}
+
+.sidebar__drop-title {
+  font-size: 13px;
+  color: var(--text-0);
+  font-weight: 500;
+}
+
+.sidebar__drop-hint {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-2);
+}
+
+.sidebar__drop-status {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--melon-mint);
+  margin-top: 4px;
+}
+
+.sidebar__fallback {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--melon-pink);
+  border-radius: 6px;
+  background: rgba(255, 24, 93, 0.06);
+}
+
+.sidebar__fallback-note {
+  font-size: 11px;
+  color: var(--text-1);
+}
+
+.sidebar__fallback input {
+  width: 100%;
+  font-family: var(--mono);
+}
+
+/* Multi-.d picker, embedded in sidebar */
+.sidebar__samples {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg-2);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sidebar__samples-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sidebar__samples-count {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--melon-pink);
+  flex: 1;
+}
+
+.sidebar__samples-cancel {
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 6px;
+  cursor: pointer;
+}
+
+.sidebar__samples-cancel:hover {
+  color: var(--melon-pink);
+  background: transparent;
+  border: none;
+}
+
+.sidebar__samples-parent {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-2);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+}
+
+.sidebar__samples-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.sidebar__samples-list li {
+  margin: 2px 0;
+}
+
+.sidebar__samples-list li.is-invalid {
+  opacity: 0.45;
+}
+
+.sidebar__sample-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  text-align: left;
+}
+
+.sidebar__sample-fmt {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  color: var(--text-2);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sidebar__sample-fmt.is-tims {
+  color: var(--melon-leaf);
+  border-color: var(--melon-leaf);
+  background: rgba(0, 209, 8, 0.10);
+}
+
+.sidebar__sample-fmt.is-fticr {
+  color: var(--melon-mint);
+  border-color: var(--melon-mint);
+  background: rgba(136, 255, 129, 0.10);
+}
+
+.sidebar__sample-fmt.is-qtof {
+  color: var(--melon-pink);
+  border-color: var(--melon-pink);
+  background: rgba(255, 24, 93, 0.10);
+}
+
+.sidebar__sample-row:hover:not(:disabled):not(.is-loaded) {
+  background: rgba(136, 255, 129, 0.08);
+  border-color: var(--melon-mint);
+  color: var(--text-0);
+}
+
+.sidebar__sample-row.is-loaded {
+  background: rgba(0, 209, 8, 0.10);
+  border-color: var(--melon-leaf);
+  cursor: default;
+}
+
+.sidebar__sample-row.is-loaded .sidebar__sample-name {
+  color: var(--melon-leaf);
+  font-weight: 600;
+}
+
+.sidebar__sample-name {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar__sample-size {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-2);
+}
+
+/* Loaded card */
+.sidebar__loaded {
+  border-left: 2px solid var(--melon-leaf);
+  background: rgba(0, 209, 8, 0.05);
+  padding: 8px 10px;
+  border-radius: 0 6px 6px 0;
+}
+
+.sidebar__section-head {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--melon-pink);
+  margin-bottom: 6px;
+}
+
+.sidebar__loaded-name {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-0);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar__loaded-meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-2);
+  margin-top: 3px;
+}
+
+/* Deconv preset block */
+.sidebar__deconv {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar__run {
+  background: var(--melon-leaf);
+  color: #000;
+  border: 1px solid var(--melon-leaf);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 8px 12px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sidebar__run:hover:not(:disabled) {
+  background: var(--melon-mint);
+  border-color: var(--melon-mint);
+  color: #000;
+}
+
+.sidebar__run:disabled {
+  background: var(--bg-2);
+  color: var(--text-2);
+  border-color: var(--line);
+}
+
+.sidebar__run-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  border-top-color: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ---- legacy multi-sample picker (kept for back-compat with existing component) ---- */
 
 .dropzone {
   flex: 1;
   margin: 18px;
-  border: 2px dashed var(--line);
+  border: 2px dashed var(--line-strong);
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -306,20 +890,19 @@ select:focus {
   gap: 10px;
   padding: 32px;
   cursor: pointer;
-  transition: border-color 120ms, background 120ms, transform 80ms;
+  transition: border-color 120ms, background 120ms;
   text-align: center;
   user-select: none;
 }
 
 .dropzone:hover {
-  border-color: var(--accent-strong);
-  background: rgba(88, 166, 255, 0.04);
+  border-color: var(--melon-mint);
+  background: rgba(136, 255, 129, 0.04);
 }
 
 .dropzone.is-active {
-  border-color: var(--accent);
-  background: rgba(88, 166, 255, 0.08);
-  transform: scale(1.005);
+  border-color: var(--melon-leaf);
+  background: rgba(0, 209, 8, 0.08);
 }
 
 .dropzone__title {
@@ -336,10 +919,9 @@ select:focus {
 
 .dropzone__icon {
   font-size: 28px;
-  opacity: 0.5;
+  color: var(--melon-leaf);
+  opacity: 0.6;
 }
-
-/* ---- Multi-sample picker (parent folder containing many .d) ---- */
 
 .sample-picker {
   flex: 1;
@@ -370,7 +952,7 @@ select:focus {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  direction: rtl;        /* keep the tail visible when it overflows */
+  direction: rtl;
   text-align: left;
 }
 
@@ -405,7 +987,7 @@ select:focus {
 }
 
 .sample-picker__row:hover:not(.is-invalid) {
-  background: rgba(88, 166, 255, 0.08);
+  background: rgba(136, 255, 129, 0.08);
 }
 
 .sample-picker__row.is-invalid {
@@ -459,6 +1041,17 @@ select:focus {
   font-family: var(--mono) !important;
 }
 
+/* Pin uPlot's canvas absolutely inside its container. Without this the
+   .uplot div participates in flex layout and its intrinsic height can
+   feed back into the parent's clientHeight, which our ResizeObserver
+   sees as a size change and re-calls setSize on — creating a slow
+   "y-axis keeps drifting" loop where the plot grows by one pixel each
+   frame. */
+.spectrum__plot > .uplot {
+  position: absolute;
+  inset: 0;
+}
+
 .uplot .u-legend {
   color: var(--text-1);
 }
@@ -467,23 +1060,40 @@ select:focus {
   color: var(--text-1);
 }
 
+.uplot .u-select {
+  background: rgba(255, 24, 93, 0.18) !important;
+  border: 1px solid var(--melon-pink) !important;
+}
+
 /* ---- Toolbar (under titlebar) ---- */
 
 .toolbar {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 12px;
+  padding: 0 14px;
   background: var(--bg-1);
   border-bottom: 1px solid var(--line);
   font-size: 12px;
 }
 
+.toolbar__meta {
+  font-family: var(--mono);
+  color: var(--melon-mint);
+  font-size: 11px;
+}
+
+.toolbar__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
 .toolbar__primary {
-  background: var(--accent-strong);
-  color: #0d1117;
-  border: 1px solid var(--accent-strong);
-  font-weight: 600;
+  background: var(--melon-leaf);
+  color: #000;
+  border: 1px solid var(--melon-leaf);
+  font-weight: 700;
   padding: 4px 12px;
   display: inline-flex;
   align-items: center;
@@ -491,8 +1101,9 @@ select:focus {
 }
 
 .toolbar__primary:hover:not(:disabled) {
-  background: #79b8ff;
-  border-color: #79b8ff;
+  background: var(--melon-mint);
+  border-color: var(--melon-mint);
+  color: #000;
 }
 
 .toolbar__primary:disabled {
@@ -504,17 +1115,11 @@ select:focus {
 .toolbar__spinner {
   width: 12px;
   height: 12px;
-  border: 2px solid rgba(0,0,0,0.2);
-  border-top-color: rgba(0,0,0,0.6);
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-top-color: rgba(0, 0, 0, 0.7);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   display: inline-block;
-}
-
-.toolbar__meta {
-  font-family: var(--mono);
-  color: var(--text-2);
-  font-size: 11px;
 }
 
 /* ---- Center column split (m/z + mass-domain stacked) ---- */
@@ -584,15 +1189,15 @@ select:focus {
 
 .filter-summary .all .k,
 .filter-summary .all .v {
-  color: var(--accent-strong);
-  font-weight: 600;
+  color: var(--melon-leaf);
+  font-weight: 700;
 }
 
 .pane__header-spinner {
   width: 9px;
   height: 9px;
   border: 1.5px solid var(--bg-3);
-  border-top-color: var(--accent);
+  border-top-color: var(--melon-pink);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   display: inline-block;
@@ -612,7 +1217,7 @@ select:focus {
 .peakdetail__mass strong {
   font-size: 18px;
   font-family: var(--mono);
-  color: var(--text-0);
+  color: var(--melon-mint);
 }
 
 .peakdetail__mass .unit {
@@ -667,15 +1272,15 @@ select:focus {
 }
 
 .badge--pass {
-  color: var(--success);
-  border-color: var(--success);
-  background: rgba(63, 185, 80, 0.1);
+  color: var(--melon-leaf);
+  border-color: var(--melon-leaf);
+  background: rgba(0, 209, 8, 0.10);
 }
 
 .badge--fail {
-  color: var(--error);
-  border-color: var(--error);
-  background: rgba(248, 81, 73, 0.08);
+  color: var(--melon-pink);
+  border-color: var(--melon-pink);
+  background: rgba(255, 24, 93, 0.08);
 }
 
 .badge--unknown {
@@ -683,8 +1288,8 @@ select:focus {
 }
 
 .badge--cluster {
-  color: var(--accent);
-  border-color: var(--accent);
+  color: var(--melon-mint);
+  border-color: var(--melon-mint);
 }
 
 .peakdetail__chargehead {
@@ -747,22 +1352,22 @@ select:focus {
   cursor: pointer;
   pointer-events: auto;
   position: relative;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
   animation: toastin 160ms ease-out;
 }
 
 .toast--error {
-  border-color: var(--error);
-  color: var(--error);
+  border-color: var(--melon-pink);
+  color: var(--melon-pink);
 }
 
 .toast--success {
-  border-color: var(--success);
-  color: var(--success);
+  border-color: var(--melon-leaf);
+  color: var(--melon-leaf);
 }
 
 .toast--info {
-  border-color: var(--accent-strong);
+  border-color: var(--melon-mint);
 }
 
 .toast__close {

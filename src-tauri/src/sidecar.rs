@@ -21,6 +21,7 @@ use std::thread;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use tauri::{AppHandle, Emitter};
 use tokio::sync::{oneshot, Mutex};
 
 #[derive(Debug, Serialize, Clone)]
@@ -42,11 +43,15 @@ struct SidecarResponse {
     result: Option<Value>,
     #[serde(default)]
     error: Option<Value>,
-    /// Set on the initial "ready" event the sidecar emits at start-up.
+    /// Set on the initial "ready" event the sidecar emits at start-up,
+    /// or "progress" for interim per-command updates.
     #[serde(default)]
     event: Option<String>,
     #[serde(default)]
     commands: Option<Vec<String>>,
+    /// Payload of an interim progress event.
+    #[serde(default)]
+    data: Option<Value>,
 }
 
 pub struct Sidecar {
@@ -57,6 +62,14 @@ pub struct Sidecar {
 }
 
 static SIDECAR: OnceCell<Arc<Sidecar>> = OnceCell::new();
+static APP_HANDLE: OnceCell<AppHandle> = OnceCell::new();
+
+/// Stash the Tauri AppHandle so the sidecar reader thread can emit
+/// front-end events (e.g. progress updates) without needing it threaded
+/// through every call site. Must be called before `start()`.
+pub fn set_app_handle(handle: AppHandle) {
+    let _ = APP_HANDLE.set(handle);
+}
 
 /// Resolve the absolute path of the Python interpreter that should run the
 /// sidecar. Order of resolution:
@@ -126,6 +139,14 @@ pub fn start() -> Result<(), String> {
     if SIDECAR.get().is_some() {
         return Ok(());
     }
+
+    // The std::thread reader below is NOT registered with any tokio
+    // runtime, so calling `tokio::runtime::Handle::try_current()` from
+    // inside it always returns Err. Earlier versions did exactly that
+    // and silently dropped every status update + command response. We
+    // now use `tauri::async_runtime::spawn`, which is a global helper
+    // backed by Tauri's own runtime — callable from any thread, no
+    // runtime context required at the call site.
 
     let app_root = resolve_app_root();
     let python = resolve_python(&app_root);
@@ -206,11 +227,25 @@ pub fn start() -> Result<(), String> {
                 let cmds = parsed.commands.unwrap_or_default();
                 eprintln!("[sidecar-rs] ready with {} commands", cmds.len());
                 let sc = sidecar_clone.clone();
-                tokio::runtime::Handle::try_current()
-                    .ok()
-                    .map(|h| h.spawn(async move {
-                        *sc.status.lock().await = SidecarStatus::Ready { commands: cmds };
-                    }));
+                tauri::async_runtime::spawn(async move {
+                    *sc.status.lock().await = SidecarStatus::Ready { commands: cmds };
+                });
+                continue;
+            }
+
+            // Interim progress event: forward to the front end as a Tauri
+            // event keyed on the request id. Final response still arrives
+            // afterwards via the pending HashMap.
+            if parsed.event.as_deref() == Some("progress") {
+                if let Some(handle) = APP_HANDLE.get() {
+                    let payload = json!({
+                        "id": parsed.id.clone(),
+                        "data": parsed.data.unwrap_or(Value::Null),
+                    });
+                    if let Err(e) = handle.emit("sidecar-progress", payload) {
+                        eprintln!("[sidecar-rs] failed to emit progress: {e}");
+                    }
+                }
                 continue;
             }
 
@@ -221,12 +256,10 @@ pub fn start() -> Result<(), String> {
                     json!({ "ok": false, "error": parsed.error.unwrap_or(Value::Null) })
                 };
                 let pending = pending_for_reader.clone();
-                tokio::runtime::Handle::try_current().ok().map(|h| {
-                    h.spawn(async move {
-                        if let Some(tx) = pending.lock().await.remove(&id) {
-                            let _ = tx.send(payload);
-                        }
-                    })
+                tauri::async_runtime::spawn(async move {
+                    if let Some(tx) = pending.lock().await.remove(&id) {
+                        let _ = tx.send(payload);
+                    }
                 });
             }
         }

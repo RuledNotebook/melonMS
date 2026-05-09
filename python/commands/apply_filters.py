@@ -193,7 +193,7 @@ def _coerce_input_hit(p: dict, sample: str) -> dict:
     }
 
 
-def run(params: dict) -> dict:
+def run(params: dict, emit=None) -> dict:
     raw_mass_list = params.get("mass_list")
     if raw_mass_list is None:
         raise ValueError("Missing required parameter: mass_list")

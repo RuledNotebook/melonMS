@@ -6,23 +6,13 @@ import {
   saveConfigToBrowser,
   saveConfigToTauri,
 } from "../config/io";
-import { runDeconvolution } from "../state/analysis";
-import {
-  deconvResult,
-  deconvRunning,
-  pushToast,
-  spectrum,
-} from "../state/store";
+import { deconvResult, pushToast } from "../state/store";
 
-/* App-level action bar: Run Deconvolution, Save/Load Config.
-   Lives between the titlebar and the main 3-column layout. */
+/* Compact action bar between the titlebar and main grid. Run Deconvolution
+   moved to the left ProjectSidebar; this row is now Save/Load Config plus
+   a one-line stats readout once a deconv result lands. */
 export function Toolbar() {
   let loadInputEl: HTMLInputElement | undefined;
-
-  async function onRun() {
-    const ok = await runDeconvolution();
-    if (ok) pushToast("success", "Deconvolution complete", 2500);
-  }
 
   async function onSave() {
     try {
@@ -60,37 +50,18 @@ export function Toolbar() {
         loadConfigFromBrowser(txt);
         pushToast("success", "Config loaded", 2500);
       } catch (err) {
-        pushToast("error", `Load failed: ${err instanceof Error ? err.message : String(err)}`);
+        pushToast(
+          "error",
+          `Load failed: ${err instanceof Error ? err.message : String(err)}`
+        );
       } finally {
-        target.value = ""; // allow re-selecting the same file
+        target.value = "";
       }
     });
   }
 
-  function runDisabled() {
-    return !spectrum() || deconvRunning();
-  }
-
   return (
     <div class="toolbar">
-      <button
-        class="toolbar__primary"
-        disabled={runDisabled()}
-        onClick={onRun}
-        title={
-          !spectrum()
-            ? "Load a spectrum first"
-            : deconvRunning()
-            ? "Deconvolution in progress"
-            : "Run deconvolution"
-        }
-      >
-        <Show when={deconvRunning()} fallback={<span>Run Deconvolution</span>}>
-          <span class="toolbar__spinner" />
-          <span>Running…</span>
-        </Show>
-      </button>
-
       <Show when={deconvResult()}>
         {(d) => (
           <span class="toolbar__meta">
@@ -101,7 +72,7 @@ export function Toolbar() {
         )}
       </Show>
 
-      <span style={{ "margin-left": "auto", display: "flex", gap: "6px" }}>
+      <span class="toolbar__actions">
         <button onClick={onSave} title="Save deconv + filter params as JSON">
           Save Config
         </button>

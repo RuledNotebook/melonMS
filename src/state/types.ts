@@ -18,13 +18,16 @@ export interface LoadSpectrumParams {
 }
 
 /* One row in the multi-sample picker. Mirrors the JSON shape returned by the
-   list_d_folders sidecar command. `valid` is false when analysis.tdf or
-   analysis.tdf_bin is missing — those rows render greyed out and are not
-   clickable. */
+   list_d_folders sidecar command. `valid` is false when the .d folder isn't
+   a format we can load on this platform (timsTOF or Mac-native FTICR);
+   QTOF .d folders are surfaced but greyed out because they require a
+   Docker-based .baf → mzML conversion that isn't wired in v0. */
+export type SampleFormat = "timsTOF" | "FTICR" | "QTOF" | "unknown";
 export interface Sample {
   name: string;
   path: string;
   size_mb: number;
+  format: SampleFormat;
   valid: boolean;
 }
 

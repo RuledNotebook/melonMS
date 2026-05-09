@@ -19,6 +19,18 @@ export const [spectrum, setSpectrum] = createSignal<SpectrumResult | null>(null)
 export const [loading, setLoading] = createSignal(false);
 export const [error, setError] = createSignal<string | null>(null);
 
+/* Streaming progress for long-running commands (load_spectrum mainly).
+   Updated by the sidecar-progress Tauri event subscription in
+   ProjectSidebar; consumed by LoadingBar. */
+export interface LoadProgress {
+  stage: string;
+  step?: number;
+  steps?: number;
+  frame?: number;
+  frames?: number;
+}
+export const [loadProgress, setLoadProgress] = createSignal<LoadProgress | null>(null);
+
 export const [sidecarStatus, setSidecarStatus] = createSignal<SidecarStatus>({
   kind: "absent",
 });
